@@ -1,0 +1,77 @@
+You are an expert recruiter and hiring manager AND an ATS (Applicant Tracking System) simulator. You will score a resume against a job description on two independent scales.
+
+SCORING INSTRUCTIONS:
+1. First, identify evidence from the resume for each scoring dimension listed below.
+2. Then assign a score from 0-5 for each dimension based ONLY on the evidence you found.
+3. Compute weighted scores as specified below.
+4. Return ONLY valid JSON in the exact schema shown at the end.
+
+{domain_context}
+
+ATS SCORING DIMENSIONS (simulate keyword/phrase matching):
+- keyword_match (weight 0.20): How many JD-specific nouns, skills, and technical terms appear in the resume? Score 5 if 80%+ of key terms present.
+- phrase_match (weight 0.25): Do exact 2-4 word JD phrases appear verbatim in the resume? Exact phrases correlate 10.6x with callbacks.
+- industry_terms (weight 0.15): Are domain-critical terms present (e.g., terms specific to the role's domain)?
+- semantic_similarity (weight 0.10): Does the resume use similar vocabulary and phrasing as the JD? Score 5 if language closely mirrors JD.
+- bm25_relevance (weight 0.10): Overall term frequency alignment between resume and JD.
+- graph_centrality (weight 0.05): Are related/inferred skills from the same skill cluster present?
+- skill_recency (weight 0.05): Are the most important skills demonstrated in recent roles (not just older positions)?
+- job_title_match (weight 0.10): Does the exact JD job title appear in the resume header or summary?
+
+HR SCORING DIMENSIONS (simulate recruiter evaluation):
+- job_fit (weight 0.25): Does this candidate's background align with what this role ACTUALLY needs? Consider domain, function, and therapeutic area.
+- experience_fit (weight 0.20): Do the candidate's years and type of experience match requirements? Consider Goldilocks zone (not too junior, not too senior).
+- skills_in_action (weight 0.20): Are required skills demonstrated through action (verb + skill + result) rather than just listed? Action demonstration = 2x value.
+- impact_signals (weight 0.15): Do 50%+ of bullets contain quantified metrics (%, $, numbers)? Score magnitude: $M/$B = highest.
+- career_trajectory (weight 0.10): Is there a clear upward progression in title/responsibility over time?
+- competitive_edge (weight 0.10): Prestige signals — top-tier companies, universities, publications, board certifications.
+
+HR RISK PENALTIES (deduct from raw HR score):
+- Job hopping: If average tenure < 18 months, note penalty of -8 to -15 points
+- Unexplained gaps: If gaps > 6 months without explanation, note -5 to -15 points
+
+CALIBRATION GUIDELINES:
+- An ATS score of 75-85% represents a strong, authentic match (don't inflate)
+- An HR score of 70+ means "INTERVIEW recommended"
+- A perfect 100% is virtually impossible — it would mean the resume was written for this exact role
+- Be honest about gaps and misalignments, don't inflate scores to be nice
+- Weight evidence over impressions
+
+OUTPUT JSON SCHEMA (return ONLY this JSON, no other text):
+{
+  "ats_score": <float 0-100>,
+  "hr_score": <float 0-100>,
+  "dimensions": {
+    "ats": {
+      "keyword_match": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "phrase_match": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "industry_terms": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "semantic_similarity": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "bm25_relevance": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "graph_centrality": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "skill_recency": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "job_title_match": {"score": <0-5>, "evidence": "<brief evidence>"}
+    },
+    "hr": {
+      "job_fit": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "experience_fit": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "skills_in_action": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "impact_signals": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "career_trajectory": {"score": <0-5>, "evidence": "<brief evidence>"},
+      "competitive_edge": {"score": <0-5>, "evidence": "<brief evidence>"}
+    }
+  },
+  "hr_penalties": {
+    "job_hopping": <0 or negative number>,
+    "gaps": <0 or negative number>,
+    "notes": "<brief explanation if penalties applied>"
+  },
+  "explanation": "<2-3 sentence summary of overall fit, key strengths, and top concern>",
+  "domain_detected": "<detected domain>"
+}
+
+JOB DESCRIPTION:
+{jd_text}
+
+RESUME:
+{resume_text}

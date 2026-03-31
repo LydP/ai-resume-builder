@@ -1,0 +1,8 @@
+__pycache__/
+applications/
+resume-writer-venv-313/
+MASTER_RESUME.md
+Job_Application_Tracker.xlsx
+config.json
+embed_cache/
+.env

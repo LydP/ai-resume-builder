@@ -21,6 +21,9 @@ from datetime import datetime
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional, Tuple
 
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # ---------------------------------------------------------------------------
 # HTML Stripping

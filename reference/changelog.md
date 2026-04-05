@@ -257,6 +257,13 @@ Replaced the ATS/Workday resume format with the human-first SheetsResume.com tem
 - Action A fallback glob: removed `*MASTER*RESUME*.docx` and `*MASTER*RESUME*.pdf` variants; now `*MASTER*RESUME*.md` only
 - Action B format-aware reading: collapsed to "Use `Read` tool directly" (same rationale as entry 38)
 
+### 40. `tailor-resume.md` — Eliminated spurious summary section generation
+
+- **Rule 9** replaced: "Summary Hook: Identity + authority → differentiator" → explicit "No Summary" rule — no summary, profile, or objective section
+- **Rule 14** replaced: summary anti-cliché guidance (which presupposed a summary existed) → explicit "No Summary" rule — resume begins with WORK EXPERIENCE immediately after the contact header
+- **RESUME STRUCTURE section:** added bolded "NO SUMMARY SECTION" note before the template
+- Root cause: Rules 9 and 14 both implied a summary should be written, contradicting the SheetsResume template which has no summary section
+
 ### 40. `cover-letter.md` — Company/job title prompt added
 
 - Step 1 changed from "extract from JD" to explicitly asking the user for company name and job title

@@ -282,7 +282,7 @@ SWARM AGENTS USED: {count} | ITERATIONS: {count}
 **Rule 6 (Architecture):** Impact Lead, Challenge-Action-Result, or Scope-Authority
 **Rule 7 (Burstiness):** Vary bullet lengths: SHORT (6-10 words), MEDIUM (11-18 words), LONG (19-28 words). Never 3+ bullets in a row at same approximate length. Target per job block: 1-2 short, 3-4 medium, 1-2 long.
 **Rule 8 (Parallel):** Consistent grammar patterns per role
-**Rule 9 (Summary Hook):** Identity + authority → differentiator
+**Rule 9 (No Summary):** Do NOT write a summary, profile, or objective section. The resume starts directly with WORK EXPERIENCE.
 **Rule 10 (Authenticity):** Interview Test on every bullet
 
 **Rule 11 (Anti-Cliché):** FORBIDDEN verbs: Spearheaded, Leveraged, Utilized, Facilitated, Ensured, Demonstrated, Collaborated, Streamlined, Championed, Fostered, Harnessed, Liaised. USE: Led, Directed, Built, Drove, Cut, Grew, Won, Launched, Transformed, Redesigned, Managed.
@@ -291,7 +291,7 @@ SWARM AGENTS USED: {count} | ITERATIONS: {count}
 
 **Rule 13 (Texture):** One real-world specific detail per job block: named tool, regulation, or real constraint. e.g. "using Medidata Rave", "per ICH E6(R2)", "despite COVID-19 closures".
 
-**Rule 14 (Summary Anti-Cliché):** NEVER write: "proven track record", "passionate about", "dynamic professional", "results-driven". First sentence: specific number + years. Max 4 sentences. Sound like a senior practitioner, not a LinkedIn template.
+**Rule 14 (No Summary):** Do NOT write a summary, profile, or objective section. There is no summary. The resume begins with WORK EXPERIENCE immediately after the contact header.
 
 **Rule 15 (Company Overview Lead):** The first bullet of every role must be a company overview that borrows validity from the company's numbers. Anchor the reader on something impressive: revenue, market cap, Fortune 500 status, number of users, number of employees, funding raised, or other notable context. If the company is small/unknown, lead with its domain, product, or market position instead.
 
@@ -313,6 +313,8 @@ STRONG FIRST BULLET: OBMedia operates a portfolio of performance marketing domai
 **Rule 18 (Sparse Emphasis):** Bold and italic are used sparingly. Company names bold, job titles italic — that's it. Do not bold individual words within bullets. "When everyone is super, no one will be."
 
 ### RESUME STRUCTURE (SheetsResume Format)
+
+**NO SUMMARY SECTION.** The resume starts directly with WORK EXPERIENCE after the contact header. Do not add a summary, profile, objective, or any introductory paragraph.
 
 ```
 # [FULL NAME, CREDENTIALS]

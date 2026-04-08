@@ -250,10 +250,10 @@ def rebuild_tracker_from_folders():
             for file in folder.iterdir():
                 if file.is_file():
                     file_lower = file.name.lower()
-                    if 'resume' in file_lower and file_lower.endswith('.docx'):
+                    if 'resume' in file_lower and file_lower.endswith('.md'):
                         resume_file = file.name
                         application_date = datetime.fromtimestamp(file.stat().st_ctime)
-                    elif 'cover' in file_lower and file_lower.endswith('.docx'):
+                    elif 'cover' in file_lower and file_lower.endswith('.md'):
                         cover_letter_file = file.name
                     elif file_lower.endswith('.txt'):
                         jd_file = file.name

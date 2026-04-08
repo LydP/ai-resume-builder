@@ -611,43 +611,6 @@ def assess_format_risk(file_path: str) -> Tuple[int, List[str], Dict[str, Any]]:
         except Exception as e:
             warnings.append(f"Could not analyze PDF structure: {str(e)}")
 
-    elif ext == '.docx':
-        try:
-            import zipfile
-            import xml.etree.ElementTree as ET
-
-            with zipfile.ZipFile(file_path) as docx:
-                # Read document.xml
-                if 'word/document.xml' in docx.namelist():
-                    xml_content = docx.read('word/document.xml')
-                    root = ET.fromstring(xml_content)
-
-                    # Define namespace
-                    ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-
-                    # Count tables
-                    tables = root.findall('.//w:tbl', ns)
-                    details['tables_detected'] = len(tables)
-                    if tables:
-                        risk_score += 20 * len(tables)
-                        warnings.append(f"{len(tables)} table(s) detected - Workday/Taleo may parse incorrectly")
-
-                    # Count text boxes
-                    textboxes = root.findall('.//w:txbxContent', ns)
-                    details['text_boxes_detected'] = len(textboxes)
-                    if textboxes:
-                        risk_score += 30 * len(textboxes)
-                        warnings.append(f"{len(textboxes)} text box(es) detected - Often IGNORED by ATS parsers")
-
-                # Check for headers/footers
-                if 'word/header1.xml' in docx.namelist():
-                    details['header_content'] = True
-                if 'word/footer1.xml' in docx.namelist():
-                    details['footer_content'] = True
-
-        except Exception as e:
-            warnings.append(f"Could not analyze DOCX structure: {str(e)}")
-
     # Add warnings for header/footer content
     if details['header_content']:
         risk_score += 15
@@ -1290,39 +1253,8 @@ def detect_hidden_text(file_path: str) -> Tuple[bool, List[str], Dict[str, Any]]
     if not file_path or not os.path.exists(file_path):
         return False, [], {'error': 'File not found'}
 
-    # Check for DOCX files
-    if file_path.endswith('.docx'):
-        try:
-            from zipfile import ZipFile
-            import xml.etree.ElementTree as ET
-
-            with ZipFile(file_path, 'r') as docx:
-                # Read document.xml
-                if 'word/document.xml' in docx.namelist():
-                    xml_content = docx.read('word/document.xml').decode('utf-8')
-
-                    # Check for white color (FFFFFF) text
-                    if 'w:color w:val="FFFFFF"' in xml_content or \
-                       'w:color w:val="ffffff"' in xml_content:
-                        details['white_text_detected'] = True
-                        warnings.append("WHITE TEXT DETECTED: Possible keyword stuffing with invisible text")
-
-                    # Check for very small font sizes
-                    root = ET.fromstring(xml_content)
-                    ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-
-                    for sz in root.findall('.//w:sz', ns):
-                        size = sz.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val')
-                        if size and int(size) < 8:  # Half-points, so 8 = 4pt
-                            details['tiny_text_detected'] = True
-                            warnings.append(f"TINY TEXT DETECTED: Font size {int(size)/2}pt found")
-                            break
-
-        except Exception as e:
-            details['docx_error'] = str(e)
-
     # Check for PDF files
-    elif file_path.endswith('.pdf'):
+    if file_path.endswith('.pdf'):
         try:
             with pdfplumber.open(file_path) as pdf:
                 for page_num, page in enumerate(pdf.pages[:3]):  # Check first 3 pages
@@ -1351,13 +1283,6 @@ def detect_hidden_text(file_path: str) -> Tuple[bool, List[str], Dict[str, Any]]
     try:
         if file_path.endswith('.pdf'):
             text = extract_text_from_pdf(file_path)
-        elif file_path.endswith('.docx'):
-            try:
-                from docx import Document
-                doc = Document(file_path)
-                text = '\n'.join([p.text for p in doc.paragraphs])
-            except:
-                text = ""
         else:
             with open(file_path, 'r', encoding='utf-8') as f:
                 text = f.read()

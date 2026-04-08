@@ -2,7 +2,6 @@
 Centralized text extraction for resume and JD files.
 
 Handles:
-  - DOCX: paragraphs + tables + text boxes (shapes)
   - PDF (digital): pdfplumber with layout-aware ordering
   - PDF (scanned): OCR via pytesseract (if installed) or Claude Vision API
   - MD / TXT: plain UTF-8 read
@@ -10,7 +9,6 @@ Handles:
 Usage:
     from text_extractor import extract_text
     text = extract_text("resume.pdf")
-    text = extract_text("resume.docx")
 """
 
 import base64
@@ -21,58 +19,6 @@ import re
 import urllib.request
 from pathlib import Path
 from typing import Optional
-
-
-# ---------------------------------------------------------------------------
-# DOCX Extraction
-# ---------------------------------------------------------------------------
-
-def _extract_docx(file_path: str) -> str:
-    """Extract text from DOCX including tables and text boxes."""
-    from docx import Document
-    from docx.oxml.ns import qn
-
-    doc = Document(file_path)
-    parts: list[str] = []
-
-    # Paragraphs (main body)
-    for para in doc.paragraphs:
-        if para.text.strip():
-            parts.append(para.text)
-
-    # Tables — often used for skills grids, two-column layouts
-    for table in doc.tables:
-        for row in table.rows:
-            row_parts = [cell.text.strip() for cell in row.cells if cell.text.strip()]
-            if row_parts:
-                parts.append("  ".join(row_parts))
-
-    # Text boxes / shapes (wps:txbx elements)
-    try:
-        body = doc.element.body
-        for txbx in body.iter(qn("wps:txbx")):
-            for para_el in txbx.iter(qn("w:p")):
-                text = "".join(
-                    r.text for r in para_el.iter(qn("w:r"))
-                    if r.text
-                )
-                if text.strip():
-                    parts.append(text.strip())
-    except Exception:
-        pass  # text boxes are optional; skip if namespace lookup fails
-
-    # Headers and footers
-    try:
-        for section in doc.sections:
-            for hf in [section.header, section.footer]:
-                if hf and not hf.is_linked_to_previous:
-                    for para in hf.paragraphs:
-                        if para.text.strip():
-                            parts.append(para.text)
-    except Exception:
-        pass
-
-    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -265,22 +211,20 @@ def extract_text(file_path: str) -> str:
     """
     Extract plain text from a resume or JD file.
 
-    Supported formats: .pdf, .docx, .md, .txt
-    Handles: digital PDFs, scanned PDFs (OCR), DOCX tables, DOCX text boxes.
+    Supported formats: .pdf, .md, .txt
+    Handles: digital PDFs, scanned PDFs (OCR).
     """
     ext = Path(file_path).suffix.lower()
 
     if ext == ".pdf":
         return _extract_pdf(file_path)
-    elif ext == ".docx":
-        return _extract_docx(file_path)
     elif ext in (".md", ".txt"):
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
     else:
         raise ValueError(
             f"Unsupported file format: {ext}. "
-            "Supported: .pdf, .docx, .md, .txt"
+            "Supported: .pdf, .md, .txt"
         )
 
 

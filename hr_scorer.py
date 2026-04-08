@@ -3215,7 +3215,7 @@ def main():
         epilog="""
 Examples:
   python hr_scorer.py --score resume.pdf job_description.txt
-  python hr_scorer.py --score resume.docx jd.txt --json
+  python hr_scorer.py --score resume.md jd.txt --json
   python hr_scorer.py --web resume.pdf jd.txt
         """
     )

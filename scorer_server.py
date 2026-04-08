@@ -244,10 +244,6 @@ def _decode_base64_file(b64_content: str, filename: str) -> str:
     try:
         if ext == ".pdf":
             text = ats_scorer.extract_text_from_pdf(tmp_path)
-        elif ext == ".docx":
-            from docx import Document
-            doc = Document(tmp_path)
-            text = "\n".join(p.text for p in doc.paragraphs)
         else:
             text = file_bytes.decode("utf-8", errors="replace")
         return text

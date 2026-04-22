@@ -65,6 +65,8 @@ The same resume content in the traditional multi-line format scored 71.3% on the
 
 **2026-04-08 update:** Reproduced again on RMC Data Analyst run (2-year requirement). Inline date format + period abbreviations caused HR scorer to return "Experience knockout: 0.0 years." No workaround applied this session — HR score reported as N/A with note directing user to Score_Prompt.txt.
 
+**2026-04-08 update (TRG Data Analyst 1):** Reproduced again on same day. Same inline date format + period abbreviation cause. Same workaround — HR score reported as N/A, user directed to Score_Prompt.txt.
+
 **Fix needed:** Either update `hr_scorer.py` to parse inline date format, or switch the skill's resume template to use the multi-line date format the scorer expects.
 
 ---
@@ -154,6 +156,21 @@ The same resume content in the traditional multi-line format scored 71.3% on the
 **Workaround:** Note in the report when the ATS regression is traceable to job_title_match and the no-summary rule, so the user understands the cause. The HR score improvement is the more meaningful signal in these cases.
 
 **Fix needed:** No code fix needed — the no-summary rule is intentional. Consider updating the report template to flag when ATS regression is attributable to job_title_match specifically, so the user gets the right interpretation.
+
+---
+
+### ISS-009 — Hyphenated compound words not tokenized to component keywords in ATS scorer
+**Date:** 2026-04-08
+**Severity:** Low (marginal keyword match impact; easy workaround)
+**Context:** `/tailor-resume` skill — Phase 4 ATS keyword matching; any bullet containing hyphenated compounds
+
+**What happened:** During the TRG Data Analyst 1 run, "vendor" was identified as a missing keyword. Added "vendor-side publisher contacts" to an OBMedia bullet to try to pick up the match. Re-score showed "vendor" still listed as missing — zero improvement in keyword_match despite the word being present in the resume as a hyphen-joined token. The ATS scorer tokenizes/stems words individually and does not split hyphenated compounds, so "vendor-side" is treated as a single unknown token rather than "vendor" + "side."
+
+**Impact:** Targeted keyword additions using hyphenated forms (e.g., "vendor-side", "data-driven", "results-oriented") will not register as keyword matches. The edit wastes a bullet slot without achieving its intended ATS improvement.
+
+**Workaround:** Use the target keyword standalone or in a non-hyphenated phrase (e.g., "vendor contacts" instead of "vendor-side contacts").
+
+**Fix needed:** Update the ATS scorer tokenizer to split hyphenated tokens into component words before stemming and matching, so "vendor-side" contributes a match for "vendor."
 
 ---
 

@@ -1,6 +1,6 @@
 __pycache__/
 applications/
-resume-writer-venv-313/
+venv/
 MASTER_RESUME.md
 Job_Application_Tracker.xlsx
 config.json

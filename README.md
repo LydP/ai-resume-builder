@@ -28,7 +28,7 @@ This project automates the entire workflow: screen jobs before you apply, tailor
 
 - **Python 3.10+**
 - **Claude Code** (CLI or desktop app)
-- **A virtual environment** in the project root (any name). The `.gitignore` is set up for `resume-writer-venv-313` — use that name or update `.gitignore` to match yours.
+- **A virtual environment** in the project root (any name). The `.gitignore` is set up for `venv` — use that name or update `.gitignore` to match yours.
 - **API keys** (optional, for job discovery — see Configuration below)
 
 ---
@@ -40,7 +40,7 @@ This project automates the entire workflow: screen jobs before you apply, tailor
 git clone <repo-url>
 
 # 2. Create your virtual environment
-python -m venv resume-writer-venv-313
+python -m venv venv
 
 # 3. Open the project in Claude Code and run:
 /setup

@@ -3,6 +3,8 @@
 Technical issues prevent the tool from running correctly (crashes, path errors, environment problems).
 Implementation issues degrade output quality but don't break the run (scoring inaccuracies, logic gaps).
 
+**Reproduction policy:** When a known issue reproduces, increment the `Reproductions:` count and date list. Only add a dated update note if the reproduction yields new information (different root cause, new workaround, fix attempt, or meaningful new context). Pure "reproduced again, same behavior" observations belong in the count only.
+
 ---
 
 ## OPEN — Technical
@@ -10,6 +12,7 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ### ISS-001 — Scorer server fails to persist across shell session
 **Date:** 2026-03-30
 **Severity:** Low (CLI fallback available)
+**Reproductions:** 5 (2026-03-31, 2026-04-01, 2026-04-07, 2026-04-08, 2026-04-27)
 **Context:** `/tailor-resume` skill — Phase 0 scorer server startup
 
 **What happened:** The scorer server was launched via a background `Agent` tool call. The agent attempted to use the Bash tool but could not surface a permission approval prompt to the user while running in the background. Server never started; all scoring fell back to direct CLI calls (`ats_scorer.py`, `hr_scorer.py`).
@@ -19,8 +22,6 @@ Implementation issues degrade output quality but don't break the run (scoring in
 **2026-03-31 update:** Fix attempted — direct `Bash` call with `start /B` + `run_in_background: true`. Still failed (exit code 1, server crash). Root cause unclear; may be a Windows `start /B` incompatibility in the bash shell environment. CLI fallback continues to work. Further investigation needed.
 
 **2026-04-01 update:** Tried `run_in_background: true` with `&` appended to the command. Server process started but exited immediately with code 0. Root cause: bash kills background processes when the parent shell session exits. The "direct Bash call" fix does not work — the subprocess lifecycle is tied to the shell session. CLI fallback remains the only working path. Fix likely requires a persistent server started outside Claude Code (e.g., user runs it manually in a terminal before invoking the skill).
-
-**2026-04-07 update:** Reproduced again. Background agent (subagent_type: general-purpose) was launched to start the server; the agent's Bash tool call was denied by the user's permission system. Server never started. CLI fallback used for all scoring.
 
 **2026-04-08 update:** See ISS-008 — the denial pattern is broader than server startup. The Phase 2/3 scoring agents (base-scorer, tailored-scorer) were also denied Bash in this run. The entire background agent model is non-functional when the user's permission system is restrictive.
 
@@ -86,10 +87,13 @@ The same resume content in the traditional multi-line format scored 71.3% on the
 
 **2026-04-08 update:** Reproduced on RMC Data Analyst run. JD is for a federal government/occupational safety & health role; scorer detected "clinical_research" at 24.9% confidence (barely above noise). Applied clinical research penalties (missing FDA, GCP, IRB, clinical trial keywords) with no relevance to the JD. ATS capped at ~42% as a result.
 
+**2026-04-27 update:** Reproduced on OneMagnify Data Analyst run. JD is for a B2B digital agency; scorer classified domain as "consulting" at 24% confidence and applied a "Management Consulting / Strategy" profile. Penalized resume for missing consulting/strategy/engagement/transformation vocabulary with no relevance to the JD. Base ATS suppressed to 36%; first-pass tailored ATS at 45.7%. Resolved via two keyword iteration rounds to reach 70.8%.
+
 **Fix needed:** The domain classifier needs finer-grained profiles. Specifically:
 - Distinguish clinical healthcare roles from healthcare analytics/data roles
 - Distinguish legal/administrative services firms from finance/investment firms
 - Add a government/public sector domain profile
+- Add a B2B services / digital agency profile distinct from management consulting
 - One approach: add a secondary classification step checking for analytics/data-science signals in the JD before applying a domain-specific vocabulary profile
 - Alternatively: suppress domain-specific keyword penalties when the JD title contains "analyst," "data," or "analytics"
 
@@ -98,6 +102,7 @@ The same resume content in the traditional multi-line format scored 71.3% on the
 ### ISS-008 — Background scoring agents denied Bash; entire Phase 2/3 agent model non-functional
 **Date:** 2026-04-08
 **Severity:** Medium (scoring falls back to blocking foreground calls; no data loss but run is slower and sequential)
+**Reproductions:** 1 (2026-04-27)
 **Context:** `/tailor-resume` skill — Phase 2 base-scorer agent, Phase 3 tailored-scorer agent
 
 **What happened:** The skill launches base-scorer and tailored-scorer as background `general-purpose` agents (in addition to the scorer server startup agent documented in ISS-001). On this run, all three agent types were denied Bash permission by the user's permission system. The scoring agents returned without running any commands. All scoring fell back to sequential foreground Bash calls in the main thread.
@@ -171,6 +176,22 @@ The same resume content in the traditional multi-line format scored 71.3% on the
 **Workaround:** Use the target keyword standalone or in a non-hyphenated phrase (e.g., "vendor contacts" instead of "vendor-side contacts").
 
 **Fix needed:** Update the ATS scorer tokenizer to split hyphenated tokens into component words before stemming and matching, so "vendor-side" contributes a match for "vendor."
+
+---
+
+### ISS-010 — ATS scorer flags JD benefits/boilerplate words as missing keywords
+**Date:** 2026-04-27
+**Severity:** Low (marginal keyword match deflation; easy to identify and ignore)
+**Reproductions:** 0
+**Context:** `/tailor-resume` skill — Phase 3/4 ATS keyword matching; any JD with a benefits or EEO section
+
+**What happened:** On the OneMagnify Data Analyst run, `ats_scorer.py` listed `dental`, `accommodation`, `vision`, `intolerance`, and `workplace` as missing keywords. All five come from the JD's benefits and EEO boilerplate sections, not the qualifications. ISS-006 documents the HR scorer doing the same thing; this issue covers the ATS scorer exhibiting identical behavior.
+
+**Impact:** Keyword match dimension is artificially deflated. The missing keyword list is noisy, making it harder to identify genuine gaps worth addressing. Adding boilerplate words to the resume would be keyword stuffing with no interview test backing.
+
+**Workaround:** Ignore single common words in the missing keyword list that are clearly from benefits/EEO sections. Focus iteration on missing terms that appear in the qualifications or responsibilities sections of the JD.
+
+**Fix needed:** The ATS scorer's JD keyword extractor should scope extraction to the qualifications/requirements/responsibilities sections only, stopping before any "Benefits," "What we offer," or "Equal opportunity" heading — same fix as ISS-006 but applied to `ats_scorer.py`.
 
 ---
 

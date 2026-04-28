@@ -310,7 +310,9 @@ STRONG FIRST BULLET: OBMedia operates a portfolio of performance marketing domai
 
 **Rule 17 (Month Abbreviation):** Always abbreviate month names: Jan., Feb., Mar., Apr., May, Jun., Jul., Aug., Sep., Oct., Nov., Dec. Never spell out full month names.
 
-**Rule 18 (Sparse Emphasis):** Bold and italic are used sparingly. Company names bold, job titles italic — that's it. Do not bold individual words within bullets. "When everyone is super, no one will be."
+**Rule 18 (Sparse Emphasis):** Bold and italic are used sparingly. Company names bold, job titles italic. **Exception:** ATS keywords woven into bullet prose are bolded per Rule 19. No other words in bullets should be bolded.
+
+**Rule 19 (ATS Keyword Bolding):** After writing all bullets, do one final bolding pass. Identify every JD-sourced term intentionally placed into bullet text — tools, methodologies, skills, certifications, domain terminology — and wrap each occurrence in `**...**`. Apply to every occurrence in the bullet prose. Do NOT bold within: company names, job titles, education section, certifications lines, publications, or the Technologies/Skills bullets in the bottom section (those are already keyword-visible). Purpose: gives the user a visual map of ATS coverage to protect during manual edits.
 
 ### RESUME STRUCTURE (SheetsResume Format)
 

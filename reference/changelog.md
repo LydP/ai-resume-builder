@@ -454,6 +454,20 @@ Added `protect_sensitive_files.py` and `run_hook.sh` to `modifications/.claude/h
 - Added `## Note on File Paths` section to `changelog.md` explaining that all `modifications/` path references in changelog entries reflect the old sub-directory location and should be read as relative to the project root
 - Fixed one stale path in `status.md`: `modifications/.claude/settings.json` → `.claude/settings.json` (in the PreToolUse hook key decision)
 
+### 64. `hr_scorer.py` + `tailor-resume.md` — Fix ISS-002/ISS-005: HR scorer returns 0 on SheetsResume date format
+
+Three compounding bugs caused `hr_scorer.py` to silently return `overall_score: 0` / `AUTO-REJECT` ("Experience knockout: 0.0 years") on every resume using the SheetsResume date format with period-abbreviated months.
+
+**`tailor-resume.md`:**
+- Job entry template updated: dates moved from the company name line to their own line. Before: `**[COMPANY]**  [Mon. Year – Mon. Year]` / `*[Title]*  [Location]`. After: `**[COMPANY]**` / `[Mon. Year – Mon. Year]` / `*[Title]*  [Location]`. Location remains paired with the title line.
+
+**`hr_scorer.py`:**
+- `parse_date()`: added pre-processing step to strip trailing periods from abbreviated month tokens before pattern matching and `strptime` — `re.sub(r'\b(\w{2,9})\.\s+(\d{4})', r'\1 \2', date_str)`. Resolves ISS-005: `"Mar. 2025"` now parses correctly.
+- `date_patterns` regex: updated `\w+\s+\d{4}` to `\w+\.?\s+\d{4}` so period-abbreviated months match in date range patterns. Also resolves ISS-005.
+- Peekahead guard (standalone job-entry detection): replaced `startswith(('•', '-', '*', '—'))` with `re.match(r'^[•\-—]|^\*(?!\*)')` — the old check incorrectly excluded `**Company**` bold lines (they start with `*`); the new check only excludes genuine bullet lines (`* item`) while allowing bold lines through. Also removed the `current_job is None` constraint so all jobs in the resume are captured, not just the first.
+
+**`reference/issues.md`:** ISS-002 and ISS-005 moved to RESOLVED with resolution notes. The secondary issue in ISS-002 (scorer applies hardcoded experience default when JD explicitly states no minimum) is tracked separately and remains open.
+
 ## Aspirational / Long-Term Goals
 - Remove all Pro cloud references from `scorer_server.py` (auth, billing, usage limits, `rb_...` API keys)
 

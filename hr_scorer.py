@@ -583,6 +583,9 @@ def parse_date(date_str: str) -> Optional[date]:
 
     date_str = date_str.strip().lower()
 
+    # Strip trailing period from abbreviated months: "mar. 2025" → "mar 2025"
+    date_str = re.sub(r'\b(\w{2,9})\.\s+(\d{4})', r'\1 \2', date_str)
+
     # Handle "Present", "Current", etc.
     if any(word in date_str for word in ['present', 'current', 'now', 'ongoing']):
         return None  # None represents "Present"
@@ -732,7 +735,7 @@ def parse_resume(text: str) -> CandidateProfile:
     job_pattern = r'^[•\-*]?\s*(.+?)\s*\|\s*(.+?)\s*(?:\|\s*(.+))?$'
     # Enhanced date patterns
     date_patterns = [
-        r'(\w+\s+\d{4})\s*[-–—]\s*(\w+\s+\d{4}|present|current)',  # "June 2024 – Present"
+        r'(\w+\.?\s+\d{4})\s*[-–—]\s*(\w+\.?\s+\d{4}|present|current)',  # "June 2024 – Present", "Mar. 2025 – Present"
         r'(\d{1,2}/\d{4})\s*[-–—]\s*(\d{1,2}/\d{4}|present|current)',  # "06/2024 - Present"
         r'(\d{4})\s*[-–—]\s*(\d{4}|present|current)',  # "2024 - Present"
     ]
@@ -896,11 +899,10 @@ def parse_resume(text: str) -> CandidateProfile:
                 current_job.bullets.append(line_stripped)
                 profile.all_bullets.append(line_stripped)
             elif (in_experience_section and not job_match
-                  and not line_stripped.startswith(('•', '-', '*', '—'))
+                  and not re.match(r'^[•\-—]|^\*(?!\*)', line_stripped)
                   and '|' not in line_stripped
                   and not any(re.search(dp, line_stripped, re.IGNORECASE) for dp in date_patterns)
-                  and len(line_stripped) > 3 and len(line_stripped) < 80
-                  and current_job is None):
+                  and len(line_stripped) > 3 and len(line_stripped) < 80):
                 # Looks like a standalone title line (no-pipe format) — peek ahead for company+dates
                 next_lines = [lines[k].strip() for k in range(i + 1, min(i + 5, len(lines))) if lines[k].strip()]
                 has_date_nearby = any(

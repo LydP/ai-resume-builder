@@ -326,7 +326,8 @@ STRONG FIRST BULLET: OBMedia operates a portfolio of performance marketing domai
 
 ## WORK EXPERIENCE
 
-**[EXACT COMPANY NAME]**  [Mon. Year – Mon. Year]
+**[EXACT COMPANY NAME]**
+[Mon. Year – Mon. Year]
 *[Job Title — may be lightly tweaked for target role; see Authenticity Rules]*  [City, ST or Remote]
 
 • [Company overview — lead with the company's numbers/context to anchor the reader (revenue, users, Fortune 500 rank, headcount, $ raised, etc.)]

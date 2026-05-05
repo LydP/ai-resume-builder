@@ -863,6 +863,49 @@ def parse_resume(text: str) -> CandidateProfile:
                             current_job.duration_months = max(0, delta)
                     continue
 
+            # Check for SheetsResume bold company line: **Company Name**  [optional date]
+            # Handles inline format (**Company**  Mar. 2025 – Present) and
+            # separate-line format (**Company**\nMar. 2025 – Present\n*Title*  Location)
+            sheets_match = re.match(r'^\*\*(.+?)\*\*', line_stripped)
+            if sheets_match:
+                company_name = sheets_match.group(1).strip()
+                inline_start = None
+                inline_end = None
+                inline_is_current = False
+                for dp in date_patterns:
+                    dm = re.search(dp, line_stripped, re.IGNORECASE)
+                    if dm:
+                        inline_start = parse_date(dm.group(1))
+                        end_str = dm.group(2)
+                        if 'present' in end_str.lower() or 'current' in end_str.lower():
+                            inline_is_current = True
+                        else:
+                            inline_end = parse_date(end_str)
+                        break
+                # Peek ahead for job title (italic line: *Title*  Location)
+                pending_title = company_name
+                for k in range(i + 1, min(i + 4, len(lines))):
+                    nl = lines[k].strip()
+                    if not nl:
+                        continue
+                    if re.match(r'^\*(?!\*)(.+?)\*', nl):
+                        pending_title = re.sub(r'^\*(.+?)\*.*', r'\1', nl).strip()
+                        break
+                    if not any(re.search(dp, nl, re.IGNORECASE) for dp in date_patterns):
+                        break  # non-date, non-italic line — title not found nearby
+                if current_job:
+                    current_job.hierarchy_level = get_title_hierarchy_level(current_job.title)
+                    profile.jobs.append(current_job)
+                current_job = JobEntry(title=pending_title, company=company_name, location="")
+                if inline_start:
+                    current_job.start_date = inline_start
+                    current_job.end_date = inline_end
+                    current_job.is_current = inline_is_current
+                    end = inline_end or date.today()
+                    delta = (end.year - inline_start.year) * 12 + (end.month - inline_start.month)
+                    current_job.duration_months = max(0, delta)
+                continue
+
             # Check for date line (separate line with just dates)
             for date_pattern in date_patterns:
                 date_match = re.search(date_pattern, line_stripped, re.IGNORECASE)

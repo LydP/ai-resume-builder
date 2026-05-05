@@ -468,6 +468,20 @@ Three compounding bugs caused `hr_scorer.py` to silently return `overall_score: 
 
 **`reference/issues.md`:** ISS-002 and ISS-005 moved to RESOLVED with resolution notes. The secondary issue in ISS-002 (scorer applies hardcoded experience default when JD explicitly states no minimum) is tracked separately and remains open.
 
+### 65. `hr_scorer.py` — Fix ISS-002 regression: scorer fails on inline date format
+
+Added a dedicated `sheets_match` parsing branch to `parse_resume()` in `hr_scorer.py` that handles the SheetsResume bold company line pattern (`^\*\*(.+?)\*\*`). The prior fix (entry 64) only worked when dates appeared on a separate line; resumes using the inline format (`**Company**  Mar. 2025 – Present`) were still silently producing 0 years of experience.
+
+The new branch fires when a bold company line is detected in the experience section. It:
+1. Extracts the company name by stripping `**` markers
+2. Scans the same line for an inline date range using `date_patterns`
+3. Peeks ahead up to 3 lines for an italic job title (`^\*(?!\*)(.+?)\*`)
+4. Creates a `JobEntry` with the correct company and title, applying the date immediately if found inline or leaving `start_date = None` for the existing date-line handler to fill on the next pass
+
+Both formats now parse correctly without any template or skill changes required. Verified on the Claritev tailored resume: 7 jobs detected, 11.42 total years, HR score 69.3 (was 0).
+
+**`reference/issues.md`:** ISS-002 re-resolved with this fix noted.
+
 ## Aspirational / Long-Term Goals
 - Remove all Pro cloud references from `scorer_server.py` (auth, billing, usage limits, `rb_...` API keys)
 

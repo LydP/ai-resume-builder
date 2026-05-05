@@ -12,7 +12,7 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ### ISS-001 — Scorer server fails to persist across shell session
 **Date:** 2026-03-30
 **Severity:** Low (CLI fallback available)
-**Reproductions:** 6 (2026-03-31, 2026-04-01, 2026-04-07, 2026-04-08, 2026-04-27, 2026-04-30)
+**Reproductions:** 7 (2026-03-31, 2026-04-01, 2026-04-07, 2026-04-08, 2026-04-27, 2026-04-30, 2026-05-04)
 **Context:** `/tailor-resume` skill — Phase 0 scorer server startup
 
 **What happened:** The scorer server was launched via a background `Agent` tool call. The agent attempted to use the Bash tool but could not surface a permission approval prompt to the user while running in the background. Server never started; all scoring fell back to direct CLI calls (`ats_scorer.py`, `hr_scorer.py`).
@@ -32,7 +32,7 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ### ISS-004 — Scorer server startup fails on backslash path in bash shell
 **Date:** 2026-04-02
 **Severity:** Low (recoverable — retry with corrected path succeeded)
-**Reproductions:** 1 (2026-05-01)
+**Reproductions:** 3 (2026-05-01, 2026-05-04, 2026-05-05)
 **Context:** `/tailor-resume` skill — Phase 0 scorer server startup
 
 **What happened:** The skill constructed the venv Python path using a backslash separator (`resume-writer-venv-313\Scripts\python`), which the bash shell could not resolve. First startup attempt failed immediately with "command not found." Retrying with a forward-slash path (`resume-writer-venv-313/Scripts/python`) succeeded and the server started normally.
@@ -66,6 +66,8 @@ Implementation issues degrade output quality but don't break the run (scoring in
 
 **2026-05-01 update:** Reproduced on Comagine Health Healthcare Data Analyst run. JD is for a nonprofit healthcare quality consulting firm; scorer detected healthcare at 33.5% confidence and applied "Healthcare Operations / Hospital Administration" profile. Penalized resume for missing HIPAA, EHR, JCAHO, patient care, quality improvement — none of which appear in the JD. ATS capped at 36.5%. Same pattern as the first HSAG instance: healthcare analytics/consulting roles misclassified as clinical roles.
 
+**2026-05-04 update:** Reproduced on Decera Clinical Associate Data & Analytics Engineer run. JD is for a data engineering/analytics role at a life sciences education company; scorer classified as "clinical_research" at 32.8% confidence and applied clinical research penalties (missing FDA, GCP, IRB, pharmacovigilance). ATS capped at ~32%. New finding: the phrase matcher does not extract phrases from the JD text — it checks against a fixed domain phrase dictionary. Even after embedding exact JD phrases verbatim ("data pipelines," "data anomalies," "interactive dashboards and visualizations," "best practices," "analytics-ready"), phrase_score remained 0.0% for the full run because the matcher only checked "Power BI," "medical education," and "medical communications" — the three entries in its clinical_research phrase dictionary. This means phrase_score is effectively zero for any non-clinical role and the dimension contributes nothing to ATS on cross-domain analytics runs.
+
 **Fix needed:** The domain classifier needs finer-grained profiles. Specifically:
 - Distinguish clinical healthcare roles from healthcare analytics/data roles
 - Distinguish legal/administrative services firms from finance/investment firms
@@ -79,7 +81,7 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ### ISS-008 — Background scoring agents denied Bash; entire Phase 2/3 agent model non-functional
 **Date:** 2026-04-08
 **Severity:** Medium (scoring falls back to blocking foreground calls; no data loss but run is slower and sequential)
-**Reproductions:** 3 (2026-04-27, 2026-04-29, 2026-04-30)
+**Reproductions:** 4 (2026-04-27, 2026-04-29, 2026-04-30, 2026-05-04)
 **Context:** `/tailor-resume` skill — Phase 2 base-scorer agent, Phase 3 tailored-scorer agent
 
 **What happened:** The skill launches base-scorer and tailored-scorer as background `general-purpose` agents (in addition to the scorer server startup agent documented in ISS-001). On this run, all three agent types were denied Bash permission by the user's permission system. The scoring agents returned without running any commands. All scoring fell back to sequential foreground Bash calls in the main thread.
@@ -174,8 +176,8 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ## RESOLVED
 
 ### ISS-002 — HR scorer returns 0 on SheetsResume inline date format
-**Date:** 2026-03-31 | **Resolved:** 2026-05-01
-**Severity:** Medium | **Reproductions:** 8
+**Date:** 2026-03-31 | **Resolved:** 2026-05-05 | **Reopened:** 2026-05-05 | **Re-resolved:** 2026-05-05
+**Severity:** Medium | **Reproductions:** 9
 
 Three compounding bugs caused `hr_scorer.py` to return `overall_score: 0` / `AUTO-REJECT` ("Experience knockout: 0.0 years") on every resume using the SheetsResume inline date format (`**Company**  Mar. 2025 – Present`):
 
@@ -184,6 +186,10 @@ Three compounding bugs caused `hr_scorer.py` to return `overall_score: 0` / `AUT
 3. **Scorer peekahead guard fixed** — `startswith('*')` exclusion replaced with `re.match(r'^[•\-—]|^\*(?!\*)')` so `**Company**` bold lines are recognized as job-entry anchors; `current_job is None` constraint removed so all jobs in a resume are captured, not just the first.
 
 Note: a secondary issue identified in this bug (scorer ignores "all levels" JD language and applies a hardcoded experience default) is tracked separately and remains open.
+
+**2026-05-05 update — REOPENED:** HR scored 0 again on both the Comagine Health base template and the Claritev tailored resume ("Experience knockout: 0.0 years vs 1.0 required"). Root cause: both resumes used the inline date format (`**TELUS Digital**  Mar. 2025 – Present`) — the old format the template fix was supposed to eliminate. The Comagine Health resume predates the fix and was never updated, and the LLM generated the new tailored resume in the same inline style rather than the corrected spec format (`**Company**` / `[Mon. Year – Mon. Year]` / `*Job Title*  Location`). The scorer regex fix (item 2 above) is in place but insufficient on its own — the peekahead guard fix (item 3) appears to depend on the date being on a separate line to anchor correctly. Practical result: any resume generated by copying an old base template, or any run where the LLM defaults to the inline style, will still trigger this bug. The fix is not holding in practice.
+
+**2026-05-05 update — RE-RESOLVED:** Added a dedicated `sheets_match` parsing branch in `hr_scorer.py` that handles the SheetsResume bold company line (`^\*\*(.+?)\*\*`) regardless of whether the date appears inline or on its own line. When a bold company line is detected, the branch extracts the company name, scans the same line for an inline date range, and peeks ahead up to 3 lines for an italic job title (`^\*(?!\*)`). This makes the scorer format-agnostic — both the inline format and the three-line format now parse correctly. Verified: all 7 jobs detected on the Claritev resume (11.42 years total), HR score 69.3 (up from 0). No template or skill changes required.
 
 ---
 

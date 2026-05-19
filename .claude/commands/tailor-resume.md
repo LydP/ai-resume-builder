@@ -1,63 +1,23 @@
 # Tailor Resume Only (ATS + HR Optimized) — Swarm v3.0
 
-Optimize and tailor the resume using **parallel agent execution** for maximum speed. Target: 65%+ ATS + 70%+ HR with AUTHENTIC content (human-first SheetsResume format).
+Optimize and tailor the resume using parallel tool calls for maximum speed. Target: 65%+ ATS + 70%+ HR with AUTHENTIC content (human-first SheetsResume format).
 
 ## Job Description
 $ARGUMENTS
 
 ## Instructions
 
-You are an expert ATS optimization specialist with access to **parallel agents** (Task tool). The user has provided a job description above. Execute the following phases, launching background agents wherever possible.
+You are an expert ATS optimization specialist. The user has provided a job description above. Execute the following phases in order.
 
 ---
 
-## PHASE 0: SCORER SERVER PRE-FLIGHT
+## PHASE 0: SETUP
 
-Read `config.json` to get `venv_name`, then construct the venv Python path:
-- **Windows:** `{venv_name}\Scripts\python`
+Read `config.json` to get `venv_name`, then construct the venv Python path using **forward slashes always** (bash shell requires forward slashes even on Windows):
+- **Windows:** `{venv_name}/Scripts/python`
 - **Mac/Linux:** `{venv_name}/bin/python`
 
 Use this path (referred to as `{venv_python}` throughout this command) for all Python invocations.
-
-Check if the scorer server is running:
-```
-curl -s http://localhost:8100/health
-```
-
-- **If server responds** with `{"status":"ok",...}`: Proceed immediately (scoring calls will take <2s each).
-- **If server NOT running**: Start it in background:
-```
-Use Task tool (subagent_type: "Bash", run_in_background: true, name: "scorer-server"):
-cd "." && {venv_python} scorer_server.py --port 8100
-```
-Then retry `/health` up to 45 seconds (models take ~30s to load). Once healthy, proceed.
-- **Fallback**: If server can't start after 45s, fall back to CLI pattern (`{venv_python} ats_scorer.py --score ... --json`).
-
----
-
-## PHASE 0.5: JOB FIT PRE-CHECK (mandatory gate)
-
-Before investing time in tailoring, run the Job Fit Scorer to check for knockout disqualifiers:
-
-```bash
-curl -s -X POST http://localhost:8100/score/job-fit \
-  -H "Content-Type: application/json" \
-  -d '{"resume_text": "<master_resume_text>", "jd_text": "<jd_text>"}'
-```
-
-If server is not running, use Python directly:
-```python
-from job_fit_scorer import calculate_job_fit, format_report
-result = calculate_job_fit(resume_text, jd_text)
-```
-
-**Decision gate:**
-- **STRONG FIT (75+)**: Proceed to Phase 1.
-- **MODERATE FIT (55-74)**: Proceed — show the user fixable gaps and note them for writing.
-- **WEAK FIT (35-54)**: PAUSE. Show the user the report and ask: "This job is a weak fit (score: X). [Show knockouts/gaps]. Continue anyway?"
-- **NO-GO (<35 or hard knockouts)**: STOP. Show the full report with knockouts and alternative job titles. Do NOT proceed. Tell the user: "This job has disqualifying requirements: [list knockouts]. Better-fit roles: [alternatives]."
-
-Display the fit score, any knockouts, and key dimensions before proceeding.
 
 ---
 
@@ -90,20 +50,27 @@ Then execute these **3 actions in a single parallel tool call** (no agents — u
 
 ---
 
-## PHASE 2: BACKGROUND BASE SCORING + IMMEDIATE RESUME WRITING
+## PHASE 1.5: JOB FIT PRE-CHECK (mandatory gate)
 
-**Launch 2 background Bash agents AND start writing immediately — do NOT wait for base scores.**
+Now that `job_description.txt` is saved, run the Job Fit Scorer:
 
-Base scores are only needed for the final comparison report.
-
-**Background Agent A — Combined Base Score (ATS + HR):**
+```bash
+{venv_python} job_fit_scorer.py --check "{master_resume_path}" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
 ```
-Use Task tool (subagent_type: "Bash", run_in_background: true, name: "base-scorer"):
-curl -s -X POST http://localhost:8100/score/both -H "Content-Type: application/json" -d "{\"resume_path\": \"{base_template_path}\", \"jd_path\": \"applications/{folder}/job_description.txt\"}"
-```
-**Fallback** (if server not running): Use 2 separate Bash agents with `{venv_python} ats_scorer.py --score ... --json` and `{venv_python} hr_scorer.py --score ... --json`.
 
-**MAIN AGENT — Generate the tailored resume immediately (see RESUME WRITING RULES below).**
+**Decision gate:**
+- **STRONG FIT (75+)**: Proceed to Phase 2.
+- **MODERATE FIT (55-74)**: Proceed — show the user fixable gaps and note them for writing.
+- **WEAK FIT (35-54)**: PAUSE. Show the user the report and ask: "This job is a weak fit (score: X). [Show knockouts/gaps]. Continue anyway?"
+- **NO-GO (<35 or hard knockouts)**: STOP. Show the full report with knockouts and alternative job titles. Do NOT proceed. Tell the user: "This job has disqualifying requirements: [list knockouts]. Better-fit roles: [alternatives]."
+
+Display the fit score, any knockouts, and key dimensions before proceeding.
+
+---
+
+## PHASE 2: WRITE TAILORED RESUME
+
+Generate the tailored resume (see RESUME WRITING RULES below).
 
 Save as `resume.md` in the output folder.
 
@@ -117,51 +84,57 @@ Save as `resume.md` in the output folder.
 
 ---
 
-## PHASE 3: PARALLEL TAILORED SCORING (launch both simultaneously)
+## PHASE 3: SCORE BASE + TAILORED RESUME
 
-Once `resume.md` is saved, launch **1 background agent**:
+Once `resume.md` is saved, run four sequential CLI calls to score both the base template and the tailored resume:
 
-**Background Agent C — Combined Tailored Score (ATS + HR):**
+**Base template scores:**
+```bash
+{venv_python} ats_scorer.py --score "{base_template_path}" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
+{venv_python} hr_scorer.py --score "{base_template_path}" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
 ```
-Use Task tool (subagent_type: "Bash", run_in_background: true, name: "tailored-scorer"):
-curl -s -X POST http://localhost:8100/score/both -H "Content-Type: application/json" -d "{\"resume_path\": \"applications/{folder}/resume.md\", \"jd_path\": \"applications/{folder}/job_description.txt\"}"
+
+**Tailored resume scores:**
+```bash
+{venv_python} ats_scorer.py --score "applications/{CompanyName} - {JobTitle}/resume.md" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
+{venv_python} hr_scorer.py --score "applications/{CompanyName} - {JobTitle}/resume.md" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
 ```
-**Fallback** (if server not running): Use 2 separate Bash agents — same CLI pattern as Phase 2 fallback, using `applications/{folder}/resume.md` as the resume path.
+
+Store all four scores for the Phase 6 comparison table.
 
 ---
 
 ## PHASE 4: SCORE CHECK + ITERATION (max 2 rounds)
 
-1. **Collect scores** from agent C
-2. **Evaluate:**
+1. **Evaluate tailored scores:**
 
 ```
 IF ATS < 65%:
     → Reframe 2-3 bullet points with JD language where natural
     → Add JD-relevant items to Skills bullet in the combined bottom section
-    → Re-score via curl: `curl -s -X POST http://localhost:8100/score/both -H "Content-Type: application/json" -d '{"resume_path": "...", "jd_path": "..."}'`
+    → Re-score:
+       {venv_python} ats_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --json
+       {venv_python} hr_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --json
 
 IF ATS ≥ 65% AND HR < 70%:
     → Improve bullet impact (metrics, action verbs, company overview leads)
     → Remove awkward keyword insertions
-    → Re-score via curl to /score/both (1 background Bash agent)
+    → Re-score (same two CLI calls above)
 
 IF ATS ≥ 65% AND HR ≥ 70%:
     → PASS — proceed to finalization
 ```
 
-3. **Max 2 iteration rounds.** Each round = 1 background Bash agent calling `/score/both`.
+2. **Max 2 iteration rounds.**
 
 ---
 
 ## PHASE 5: FINALIZATION
 
-Once scores pass, launch **1 background agent**:
+Update the application tracker:
 
-**Background Agent E — Update Tracker:**
-```
-Use Task tool (subagent_type: "Bash", run_in_background: true, name: "tracker-updater"):
-cd "." && {venv_python} -c "
+```bash
+{venv_python} -c "
 from tracker_utils import add_application
 add_application(
     company='{Company}',
@@ -182,13 +155,11 @@ print('Tracker updated successfully')
 
 ## PHASE 6: CLEANUP + REPORT
 
-1. **Collect all results** (verify tracker)
-2. **Collect base scores** from Phase 2 agent (for comparison)
-3. **Save and display final report:** Write the report to `applications/{folder}/Report.txt`, then display it:
+1. **Save and display final report:** Write the report to `applications/{folder}/Report.txt`, then display it:
 
 ```
 ================================================================================
-                    RESUME TAILOR - FINAL REPORT (v3.0 Swarm)
+                    RESUME TAILOR - FINAL REPORT (v3.0)
 ================================================================================
 
 COMPANY: {Company Name}
@@ -233,13 +204,12 @@ HR RECOMMENDATION: {STRONG INTERVIEW/INTERVIEW/MAYBE/PASS}
 
 GENERATED: resume.md
 FOLDER: applications/{Company} - {JobTitle}/
+ITERATIONS: {count}
 
-================================================================================
-SWARM AGENTS USED: {count} | ITERATIONS: {count}
 ================================================================================
 ```
 
-4. **Offer** web reports:
+2. **Offer** web reports:
 ```bash
 {venv_python} ats_scorer.py --web --base "{base_template}" --tailored "applications/{folder}/resume.md" --jd "applications/{folder}/job_description.txt"
 {venv_python} hr_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --web

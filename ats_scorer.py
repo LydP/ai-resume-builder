@@ -2250,7 +2250,7 @@ def check_job_title_match(resume_text, jd_text):
     return 0, title_clean
 
 
-def calculate_keyword_match(resume_text, jd_text):
+def calculate_keyword_match(resume_text, jd_text, jd_kw_terms=None):
     """
     Calculate keyword match percentage with enhanced matching.
 
@@ -2259,14 +2259,21 @@ def calculate_keyword_match(resume_text, jd_text):
     - Acronym expansion (FDA -> food and drug administration)
     - Synonym matching via skill taxonomy
 
+    Args:
+        jd_kw_terms: Optional list of keyword strings pre-extracted by Claude.
+                     When provided, replaces Python-side JD keyword extraction.
+
     Returns:
         match_pct: Percentage of JD keywords found in resume
         matched: List of matched keywords
         missing: List of missing keywords
     """
-    # Extract keywords with lemmatization and acronym expansion
-    jd_keywords = set(extract_keywords(jd_text, use_lemmatization=True, expand_acro=True))
     resume_keywords = set(extract_keywords(resume_text, use_lemmatization=True, expand_acro=True))
+
+    if jd_kw_terms is not None:
+        jd_keywords = set(t.lower() for t in jd_kw_terms)
+    else:
+        jd_keywords = set(extract_keywords(jd_text, use_lemmatization=True, expand_acro=True))
 
     if not jd_keywords:
         return 0, [], []
@@ -2284,7 +2291,7 @@ def calculate_keyword_match(resume_text, jd_text):
     return match_pct, all_matched[:30], list(missing)[:20]
 
 
-def calculate_phrase_match(resume_text, jd_text, domain=None):
+def calculate_phrase_match(resume_text, jd_text, domain=None, jd_phrase_terms=None):
     """
     Calculate important phrase matches using domain-aware phrase sets.
 
@@ -2292,7 +2299,19 @@ def calculate_phrase_match(resume_text, jd_text, domain=None):
         resume_text: Resume content
         jd_text: Job description content
         domain: Optional domain override. If None, auto-detects from JD.
+        jd_phrase_terms: Optional list of phrase strings pre-extracted by Claude.
+                         When provided, replaces Python-side JD phrase extraction.
     """
+    if jd_phrase_terms is not None:
+        jd_phrases = set(t.lower() for t in jd_phrase_terms)
+        if not jd_phrases:
+            return 100, [], []
+        resume_lower = resume_text.lower()
+        matched = {p for p in jd_phrases if p in resume_lower}
+        missing = jd_phrases - matched
+        match_pct = (len(matched) / len(jd_phrases)) * 100
+        return match_pct, list(matched), list(missing)
+
     # Auto-detect domain from JD if not provided
     if domain is None:
         domain, _, _ = detect_domain(jd_text)
@@ -2310,7 +2329,7 @@ def calculate_phrase_match(resume_text, jd_text, domain=None):
     return match_pct, list(matched), list(missing)
 
 
-def calculate_weighted_score(resume_text, jd_text, domain=None):
+def calculate_weighted_score(resume_text, jd_text, domain=None, jd_kw_weights=None):
     """
     Calculate weighted score based on domain-specific industry keywords.
     Uses domain auto-detection to select the right keyword set.
@@ -2320,40 +2339,51 @@ def calculate_weighted_score(resume_text, jd_text, domain=None):
         resume_text: Resume content
         jd_text: Job description content
         domain: Optional domain override. If None, auto-detects from JD.
+        jd_kw_weights: Optional dict {term: weight} pre-extracted by Claude.
+                       When provided, replaces domain keyword file lookup and
+                       JD-presence filtering (all terms are already from the JD).
     """
-    # Auto-detect domain from JD if not provided
-    if domain is None:
-        domain, _, _ = detect_domain(jd_text)
-
-    domain_kw = load_domain_keywords(domain)
-
-    # Expand acronyms in both texts
     expanded_resume = expand_acronyms(resume_text)
-    expanded_jd = expand_acronyms(jd_text)
-
     cleaned_resume = clean_text(expanded_resume)
-    cleaned_jd = clean_text(expanded_jd)
     resume_tokens = set(cleaned_resume.split())
-    jd_tokens = set(cleaned_jd.split())
 
     total_weight = 0
     matched_weight = 0
     matched_terms = []
     missing_terms = []
 
-    for term, weight in domain_kw.items():
-        if contains_normalized_term(cleaned_jd, jd_tokens, term):
+    if jd_kw_weights is not None:
+        for term, weight in jd_kw_weights.items():
             total_weight += weight
-            # Check direct match
             if contains_normalized_term(cleaned_resume, resume_tokens, term):
                 matched_weight += weight
                 matched_terms.append((term, weight))
-            # Check lemmatized match
-            elif contains_normalized_term(cleaned_resume, resume_tokens, lemmatize_word(term)):
-                matched_weight += weight * 0.9  # Slightly lower for lemma match
-                matched_terms.append((term + "*", weight))
             else:
                 missing_terms.append((term, weight))
+    else:
+        # Auto-detect domain from JD if not provided
+        if domain is None:
+            domain, _, _ = detect_domain(jd_text)
+
+        domain_kw = load_domain_keywords(domain)
+
+        expanded_jd = expand_acronyms(jd_text)
+        cleaned_jd = clean_text(expanded_jd)
+        jd_tokens = set(cleaned_jd.split())
+
+        for term, weight in domain_kw.items():
+            if contains_normalized_term(cleaned_jd, jd_tokens, term):
+                total_weight += weight
+                # Check direct match
+                if contains_normalized_term(cleaned_resume, resume_tokens, term):
+                    matched_weight += weight
+                    matched_terms.append((term, weight))
+                # Check lemmatized match
+                elif contains_normalized_term(cleaned_resume, resume_tokens, lemmatize_word(term)):
+                    matched_weight += weight * 0.9  # Slightly lower for lemma match
+                    matched_terms.append((term + "*", weight))
+                else:
+                    missing_terms.append((term, weight))
 
     if total_weight == 0:
         return 100, [], []  # No specific terms required
@@ -2362,7 +2392,7 @@ def calculate_weighted_score(resume_text, jd_text, domain=None):
     return score, matched_terms, missing_terms
 
 
-def calculate_ats_score(resume_text, jd_text, file_path: str = None):
+def calculate_ats_score(resume_text, jd_text, file_path: str = None, jd_keywords: dict = None):
     """
     Calculate comprehensive ATS score with all enhanced features (v2.0).
 
@@ -2384,24 +2414,53 @@ def calculate_ats_score(resume_text, jd_text, file_path: str = None):
     - Graph Centrality: 5%
     - Skill Recency: 5%
     - Job Title Match: 10% (NEW — 10.6x callback data)
+
+    Args:
+        jd_keywords: Optional parsed jd_keywords.json dict produced by Claude.
+                     When provided, keyword/phrase/weighted scoring uses Claude's
+                     extraction exclusively instead of Python-side extraction.
     """
     # =========================================================================
     # DOMAIN DETECTION (run first to inform all domain-aware scoring)
     # =========================================================================
-    domain, domain_confidence, domain_scores = detect_domain(jd_text)
+    if jd_keywords and jd_keywords.get('domain'):
+        domain = jd_keywords['domain']
+        domain_confidence, domain_scores = 100.0, {domain: 100.0}
+    else:
+        domain, domain_confidence, domain_scores = detect_domain(jd_text)
+
+    # =========================================================================
+    # BUILD CLAUDE KEYWORD OVERRIDES (when jd_keywords provided)
+    # =========================================================================
+    kw_terms = None
+    ph_terms = None
+    kw_weights = None
+    if jd_keywords:
+        kw_terms = [e['term'] for e in jd_keywords.get('keywords', [])]
+        ph_terms = [e['term'] for e in jd_keywords.get('phrases', [])]
+        kw_weights = {
+            e['term']: e['weight']
+            for e in jd_keywords.get('keywords', []) + jd_keywords.get('phrases', [])
+        }
 
     # =========================================================================
     # CORE SCORING (Always Available)
     # =========================================================================
 
     # Keyword match (20% weight) - with lemmatization & synonyms
-    keyword_score, matched_kw, missing_kw = calculate_keyword_match(resume_text, jd_text)
+    keyword_score, matched_kw, missing_kw = calculate_keyword_match(
+        resume_text, jd_text, jd_kw_terms=kw_terms
+    )
 
     # Phrase match (25% weight) - domain-aware multi-word phrases
-    phrase_score, matched_phrases, missing_phrases = calculate_phrase_match(resume_text, jd_text, domain=domain)
+    phrase_score, matched_phrases, missing_phrases = calculate_phrase_match(
+        resume_text, jd_text, domain=domain, jd_phrase_terms=ph_terms
+    )
 
     # Weighted industry terms (15% weight) - domain-specific keyword weights
-    weighted_score, matched_weighted, missing_weighted = calculate_weighted_score(resume_text, jd_text, domain=domain)
+    weighted_score, matched_weighted, missing_weighted = calculate_weighted_score(
+        resume_text, jd_text, domain=domain, jd_kw_weights=kw_weights
+    )
 
     # BM25 scoring (10% weight) - probabilistic ranking
     bm25_score, bm25_details = calculate_bm25_score(resume_text, jd_text)
@@ -2654,12 +2713,12 @@ def get_likelihood_rating(score):
         return "Poor", "Unlikely Match", "#ef4444"
 
 
-def score_resume(resume_path, jd_path):
+def score_resume(resume_path, jd_path, jd_keywords=None):
     """Score a resume against a job description and return results."""
     resume_text = extract_text_from_file(resume_path)
     jd_text = extract_text_from_file(jd_path)
 
-    scores = calculate_ats_score(resume_text, jd_text)
+    scores = calculate_ats_score(resume_text, jd_text, jd_keywords=jd_keywords)
     rating, likelihood, color = get_likelihood_rating(scores['total_score'])
 
     scores['rating'] = rating
@@ -3020,6 +3079,7 @@ def main():
     parser = argparse.ArgumentParser(description='ATS Resume Scorer')
     parser.add_argument('--web', action='store_true', help='Run web interface')
     parser.add_argument('--score', nargs=2, metavar=('RESUME', 'JD'), help='Score resume against JD')
+    parser.add_argument('--jd-keywords', help='Path to Claude-extracted jd_keywords.json')
     parser.add_argument('--json', action='store_true', help='Output as JSON')
     parser.add_argument('--base', help='Base resume path for web comparison')
     parser.add_argument('--tailored', help='Tailored resume path for web comparison')
@@ -3031,7 +3091,11 @@ def main():
 
     if args.score:
         resume_path, jd_path = args.score
-        scores = score_resume(resume_path, jd_path)
+        jd_keywords = None
+        if args.jd_keywords:
+            with open(args.jd_keywords, 'r', encoding='utf-8') as f:
+                jd_keywords = json.load(f)
+        scores = score_resume(resume_path, jd_path, jd_keywords=jd_keywords)
 
         if args.json:
             print(json.dumps(scores, indent=2))

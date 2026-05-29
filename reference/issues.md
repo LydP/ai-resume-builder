@@ -40,6 +40,10 @@ Implementation issues degrade output quality but don't break the run (scoring in
 
 **2026-05-18 update:** Reproduced on Aquent Data Analyst 1 run. JD is for a supply chain data analyst role at a major technology company; scorer classified domain as "consulting" (23.7%) instead of "technology" (21.6%) and applied Management Consulting / Strategy penalties. New trigger identified: the JD was staffing-agency-wrapped — Aquent's own boilerplate ("Aquent Talent connects the best talent in marketing, creative, and design...") introduced consulting-adjacent language that pulled the classifier. Prior ISS-003 instances involved misclassification from the end-client's own JD language; this is the first confirmed case where the staffing agency wrapper caused the misclassification on an otherwise clearly technology-domain JD. ATS capped at 56.5% after two iterations; structural floor imposed by missing "supply chain" phrase (domain gap — not addressable) and consulting penalties in combination.
 
+**2026-05-26 update:** Reproduced on Resource Innovations Data Analyst run. JD is for an energy efficiency / clean energy analytics role at a utility program management firm; scorer classified domain as "consulting" (27.5% confidence) and applied Management Consulting / Strategy profile. Penalized resume for missing consulting/strategy/engagement/transformation vocabulary with no JD relevance. ATS capped at 61.3% after two iteration rounds despite weighted_score reaching 71.0% — the gap is driven by the consulting domain penalties and a low semantic score (44%), not keyword match. Energy efficiency / clean energy / utilities is now a confirmed new misclassification target alongside healthcare analytics, government, legal, B2B digital, telecom, and fintech.
+
+**2026-05-27 update:** Reproduced on eTeam Data Analyst run. JD is for a data analytics / BI role within a strategic finance function (SQL, Python, dashboards, data warehouse, operational performance — no financial modeling, M&A, or investment terminology). Scorer classified domain as "finance" at 25.1% confidence (same profile as Verita and Changeis runs) and applied Investment Banking / Private Equity profile. Penalized resume for missing M&A, IPO, LBO, DCF, and valuation. ATS capped at 43.4% despite keyword_score of 46.7%. Additional compounding factor: the JD's "Desired Skills" block was formatted as a concatenated run-on string with no spaces, further degrading keyword matching — tracked separately as ISS-019.
+
 **Fix needed:** The domain classifier needs finer-grained profiles. Specifically:
 - Distinguish clinical healthcare roles from healthcare analytics/data roles
 - Distinguish legal/administrative services firms from finance/investment firms
@@ -172,7 +176,7 @@ Implementation issues degrade output quality but don't break the run (scoring in
 ### ISS-016 — Job Fit Scorer: JD title extraction fails; better-fit titles pulled from wrong domain
 **Date:** 2026-05-13
 **Severity:** Low (cosmetic output errors; fit score itself appears unaffected)
-**Reproductions:** 2 (2026-05-18, 2026-05-19)
+**Reproductions:** 3 (2026-05-18, 2026-05-19, 2026-05-27)
 **Context:** `/tailor-resume` skill — Phase 1.5 job fit pre-check
 
 **What happened:** Two bugs surfaced in `calculate_job_fit` output on the Celigo Data Analyst run:
@@ -186,6 +190,51 @@ Implementation issues degrade output quality but don't break the run (scoring in
 **Workaround:** Ignore BETTER-FIT JOB TITLES when the recommended titles are clearly from an unrelated domain. The numeric fit score is the reliable signal; the title suggestions are not.
 
 **Fix needed:** (1) Fix title extraction — parse the `Job Title: {title}` prefix that the skill prepends to `job_description.txt`, or extract the title from the first non-boilerplate line of the JD before passing it to the scorer. (2) Fix better-fit title recommendations — gate suggestions on the detected domain, or suppress them when domain confidence is below a meaningful threshold (e.g., <40%).
+
+---
+
+### ISS-018 — HR skills factor is unstable; small wording changes cause large swings; ATS and HR optimize against each other
+**Date:** 2026-05-26
+**Severity:** Medium (makes iteration unreliable — a targeted ATS improvement can silently regress HR with no warning)
+**Context:** `/tailor-resume` skill — Phase 4 iteration; any run requiring more than one round of re-scoring
+
+**What happened:** On the Resource Innovations Data Analyst run, the HR scorer's `skills` factor oscillated significantly across four resume versions despite only targeted wording changes between each:
+
+| Version | skills score | Overall HR | Skills matched |
+|---------|-------------|------------|----------------|
+| Base template | 40.0 | 54.2% | 9/20 |
+| Tailored round 0 | 23.3 | 51.5% | 6/20 |
+| Tailored round 1 | 45.0 | 55.8% | 9/20 |
+| Tailored round 2 | 35.0 | 53.8% | 7/20 |
+
+The round 2 change was a single bullet edit: "advanced **SQL** against ~1B-row **Snowflake** datasets to surface" → "pulled and analyzed ~1B-row **Snowflake** datasets via advanced **SQL** to surface." This produced zero ATS improvement (stayed at 61.3%) while dropping HR skills from 45.0 to 35.0 and overall HR from 55.8% to 53.8%. The two scorers penalized and rewarded the same word substitution in opposite directions — the added word "pulled" (targeting an ATS keyword gap) apparently displaced a word the HR scorer was using to match a required skill.
+
+**Impact:** Iteration is unreliable when both ATS and HR are below their targets simultaneously. Optimizing for one scorer can regress the other with no warning, and the reversal only becomes visible after re-scoring both. The oscillation also makes it hard to determine whether a score change reflects a real quality difference or scorer sensitivity to incidental word choice.
+
+**Workaround:** When both ATS and HR are below target, prioritize the larger gap and accept that the other may regress slightly. Always re-score both scorers after each edit, not just the one being targeted. If a round 2 edit makes HR worse with no ATS gain, revert and report the best round 1 scores as final.
+
+**Fix needed:** Investigate whether the HR skills matcher is doing exact substring matching against the bullet text, making it sensitive to word order and synonyms. If so, add stemming/lemmatization so "advanced SQL" and "SQL via" both contribute to the same skill match. Separately, consider whether the ATS and HR scorers should be tested for inverse-response behavior on a shared benchmark set — if optimizing ATS for a given keyword reliably degrades HR, that is a calibration problem in one or both scorers.
+
+---
+
+### ISS-019 — ATS scorer produces garbled token artifacts from concatenated JD desired-skills blocks
+**Date:** 2026-05-27
+**Severity:** Low (ATS keyword score artificially deflated; garbled tokens are unactionable — cannot be added to resume; phrase_score locked at 0.0)
+**Context:** `/tailor-resume` skill — Phase 3/4 ATS keyword matching; JDs with a desired-skills section formatted as a concatenated run-on string with no spaces between terms
+
+**What happened:** The eTeam JD included a "Desired Skills and Experience" section formatted as a single run-on block of adjacent capitalized keywords with no spaces: `DATA ANALYSTBI ANALYSTBUSINESS INTELLIGENCE ANALYSTSTRATEGIC FINANCE ANALYST...SQLTABLEAUPYTHONHADOOPSPARKHIVEPRESTOPIGDATA VISUALIZATIONANALYTICSREPORTINGDASHBOARDDASHBOARDSETLDATA WAREHOUSEDATA MANAGEMENTDATA ANALYSISBUSINESS INTELLIGENCEKPIFINANCESTRATEGIC FINANCEECOSYSTEMOPERATIONSBUSINESS`
+
+The ATS scorer's tokenizer ingested this block verbatim and produced garbled compound tokens that appeared in `missing_keywords`: `"visualizationanalyticsreportingdashboarddashboardsetldata"`, `"intelligencekpifinancestrategic"`, `"financeecosystemoperationsbusiness"`, `"analystbusiness"`, `"analystreport"`. These are not real keywords — they are adjacent JD terms fused by the concatenated format. No amount of resume editing can match them.
+
+The phrase extractor was also affected: it could only extract `"strategic finance"` as a tracked phrase from the entire JD, because that was the only recognizable term from the finance phrase dictionary that happened to straddle a word boundary in the concatenated block. All other phrase opportunities in the JD's structured sections were overwhelmed by the run-on block, resulting in `phrase_score = 0.0%` throughout all iteration rounds. Note: `phrase_score = 0.0` for non-clinical roles is also separately documented in ISS-003 as a fixed-dictionary limitation; the concatenated block is an additional compounding cause.
+
+**Impact:** `missing_keywords` list is polluted with unparseable compound tokens. `phrase_score` is locked at 0.0 (a 0.25-weighted ATS component), contributing nothing to the score regardless of how many exact JD phrases appear in the resume. The ATS ceiling for this run was structurally capped at ~43% due to these factors in combination with genuine missing skills (Tableau, strategic finance domain). The score drop is invisible to the user — the report looks like a normal low-match result, not a parser failure.
+
+**Workaround:** Identify garbled tokens in `missing_keywords` by looking for concatenated strings with no spaces (e.g., `"visualizationanalyticsreportingdashboard"`). Treat them as unactionable tokenizer artifacts, not real skill gaps. Note in the report that the ATS score is structurally deflated by the JD's formatting. Direct the user to Score_Prompt.txt for LLM-based scoring, which handles free-text JDs without tokenization.
+
+**Relationship to ISS-010:** ISS-010 covers benefits/EEO boilerplate words from the JD appearing as missing keywords. This issue covers a different mechanism — intentional skills content formatted without spaces, causing the tokenizer to fuse adjacent terms into unrecognizable compound strings. Both result in unactionable noise in `missing_keywords` but from different root causes and JD sections.
+
+**Fix needed:** Pre-process the JD text before tokenization to detect and split concatenated all-caps blocks. One approach: identify runs of adjacent capitalized words (e.g., `[A-Z]{2,}`) with no whitespace between them and attempt to split them using a dictionary of known skills/terms. A simpler heuristic: if a token in `missing_keywords` contains more than ~20 characters and no spaces, flag it as a likely tokenizer artifact and exclude it from the displayed gap list. The phrase extractor should additionally be restricted to structured JD sections (bullet-list lines, lines under recognized section headers) rather than running over the full raw JD text.
 
 ---
 

@@ -70,11 +70,9 @@ Display the fit score, any knockouts, and key dimensions before proceeding.
 
 ## PHASE 2: WRITE TAILORED RESUME
 
-Generate the tailored resume (see RESUME WRITING RULES below).
+Generate the tailored resume (see RESUME WRITING RULES below). Write all bullets first — **do not bold anything yet**.
 
-Save as `resume.md` in the output folder.
-
-**After saving `resume.md`, extract and save JD keywords.**
+**After writing all bullets, extract and save JD keywords first**, then do the bolding pass (Rule 19), then save `resume.md`.
 
 Analyze the job description and list the keywords and phrases you intentionally targeted when writing the resume. Save as `applications/{CompanyName} - {JobTitle}/jd_keywords.json`:
 
@@ -304,7 +302,7 @@ STRONG FIRST BULLET: OBMedia operates a portfolio of performance marketing domai
 
 **Rule 18 (Sparse Emphasis):** Bold and italic are used sparingly. Company names bold, job titles italic. **Exception:** ATS keywords woven into bullet prose are bolded per Rule 19. No other words in bullets should be bolded.
 
-**Rule 19 (ATS Keyword Bolding):** After writing all bullets, do one final bolding pass. Identify every JD-sourced term intentionally placed into bullet text — tools, methodologies, skills, certifications, domain terminology — and wrap each occurrence in `**...**`. Apply to every occurrence in the bullet prose. Do NOT bold within: company names, job titles, education section, certifications lines, publications, or the Technologies/Skills bullets in the bottom section (those are already keyword-visible). Purpose: gives the user a visual map of ATS coverage to protect during manual edits.
+**Rule 19 (ATS Keyword Bolding):** After saving `jd_keywords.json`, do one final bolding pass before saving `resume.md`. Read `jd_keywords.json` and collect all entries from both the `keywords` and `phrases` arrays. Search the bullet prose for each entry case-insensitively and wrap every match in `**...**`. Match `phrases` first — if a phrase matches, do not additionally bold its component keywords within that match (e.g., "**sql queries**" not "**sql** **queries**"). Do NOT bold within: company names, job titles, education section, certifications lines, publications, or the Technologies/Skills bullets in the bottom section (those are already keyword-visible). Purpose: gives the user a deterministic visual map of ATS coverage tied to the actual keyword list.
 
 ### RESUME STRUCTURE (SheetsResume Format)
 

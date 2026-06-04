@@ -20,6 +20,7 @@ CLI:
     python job_fit_scorer.py --check resume.md jd.txt --json
 """
 
+import os
 import re
 import json
 import argparse
@@ -35,9 +36,9 @@ from hr_scorer import (
     CandidateProfile, JobRequirements, JobEntry
 )
 from ats_scorer import (
-    detect_domain, extract_jd_keywords, check_job_title_match,
+    detect_domain, check_job_title_match,
     embed_with_cache, SBERT_AVAILABLE, SYNONYM_MAP,
-    is_valid_skill, extract_keywords
+    is_valid_skill
 )
 
 try:
@@ -331,7 +332,7 @@ THERAPEUTIC_AREA_PATTERNS = [
 ]
 
 
-def extract_requirements(jd_text: str) -> ExtractedRequirements:
+def extract_requirements(jd_text: str, jd_keywords: dict = None) -> ExtractedRequirements:
     """Extract structured requirements from a job description."""
     req = ExtractedRequirements()
     jd_lower = jd_text.lower()
@@ -438,8 +439,11 @@ def extract_requirements(jd_text: str) -> ExtractedRequirements:
         req.location_type = 'on-site'
 
     # --- Skills (required vs preferred) ---
-    jd_keywords = extract_jd_keywords(jd_text, domain=domain)
-    all_skills = jd_keywords.get('keywords', []) + jd_keywords.get('phrases', [])
+    jd_kw = jd_keywords or {}
+    all_skills = (
+        [e['term'] for e in jd_kw.get('keywords', [])] +
+        [e['term'] for e in jd_kw.get('phrases', [])]
+    )
 
     if pref_section:
         pref_lower = pref_section.lower()
@@ -1188,19 +1192,20 @@ def _suggest_alternative_titles(profile: EnrichedProfile, req: ExtractedRequirem
 # STEP 6: MAIN FUNCTION
 # =============================================================================
 
-def calculate_job_fit(resume_text: str, jd_text: str) -> JobFitResult:
+def calculate_job_fit(resume_text: str, jd_text: str, jd_keywords: dict = None) -> JobFitResult:
     """
     Main entry point. Calculate job fit score with knockout detection.
 
     Args:
         resume_text: Full master resume text
         jd_text: Job description text
+        jd_keywords: Parsed jd_keywords.json dict produced by Claude.
 
     Returns:
         JobFitResult with score, recommendation, knockouts, dimensions, gaps
     """
     # Step 1: Extract requirements from JD
-    req = extract_requirements(jd_text)
+    req = extract_requirements(jd_text, jd_keywords=jd_keywords)
 
     # Step 2: Build candidate profile
     profile = build_candidate_profile(resume_text)
@@ -1371,7 +1376,16 @@ def main():
         with open(jd_path, 'r', encoding='utf-8') as f:
             jd_text = f.read()
 
-        result = calculate_job_fit(resume_text, jd_text)
+        jd_keywords_path = os.path.join(os.path.dirname(os.path.abspath(jd_path)), 'jd_keywords.json')
+        if not os.path.exists(jd_keywords_path):
+            raise FileNotFoundError(
+                f"jd_keywords.json not found in {os.path.dirname(jd_keywords_path)!r}. "
+                "Run the tailor-resume skill first to generate it."
+            )
+        with open(jd_keywords_path, 'r', encoding='utf-8') as f:
+            jd_kw = json.load(f)
+
+        result = calculate_job_fit(resume_text, jd_text, jd_keywords=jd_kw)
 
         if args.json:
             print(json.dumps(result.to_dict(), indent=2))

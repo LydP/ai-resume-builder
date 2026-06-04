@@ -116,7 +116,7 @@ Once `resume.md` is saved, run four sequential CLI calls to score both the base 
 
 **Tailored resume scores:**
 ```bash
-{venv_python} ats_scorer.py --score "applications/{CompanyName} - {JobTitle}/resume.md" "applications/{CompanyName} - {JobTitle}/job_description.txt" --jd-keywords "applications/{CompanyName} - {JobTitle}/jd_keywords.json" --json
+{venv_python} ats_scorer.py --score "applications/{CompanyName} - {JobTitle}/resume.md" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
 {venv_python} hr_scorer.py --score "applications/{CompanyName} - {JobTitle}/resume.md" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
 ```
 
@@ -133,7 +133,7 @@ IF ATS < 65%:
     → Reframe 2-3 bullet points with JD language where natural
     → Add JD-relevant items to Skills bullet in the combined bottom section
     → Re-score:
-       {venv_python} ats_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --jd-keywords "applications/{folder}/jd_keywords.json" --json
+       {venv_python} ats_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --json
        {venv_python} hr_scorer.py --score "applications/{folder}/resume.md" "applications/{folder}/job_description.txt" --json
 
 IF ATS ≥ 65% AND HR < 70%:

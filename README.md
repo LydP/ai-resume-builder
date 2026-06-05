@@ -105,6 +105,7 @@ applications/
     ├── resume.md           # Tailored resume (final deliverable)
     ├── cover_letter.md     # Generated cover letter
     ├── job_description.txt # Original JD (reference copy)
+    ├── jd_keywords.json    # Claude-extracted JD keywords used for ATS scoring
     ├── Report.txt          # ATS + HR score breakdown
     └── Score_Prompt.txt    # (if enabled) Paste into Claude.ai for LLM scoring
 ```

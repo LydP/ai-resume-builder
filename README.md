@@ -63,6 +63,44 @@ python -m venv venv
 
 ---
 
+## How `/tailor-resume` Works
+
+```mermaid
+flowchart TD
+    CMD(["/tailor-resume &lt;job description&gt;"]) --> P0["Phase 0 — Setup\nRead config.json · resolve venv path"]
+    P0 --> ASK["Ask: company name &amp; job title"]
+    ASK --> P1
+
+    subgraph P1["Phase 1 — Parallel Research (3 simultaneous actions)"]
+        direction LR
+        A["Find best prior resume\nor master fallback"]
+        B["Read master resume\nfor canonical facts"]
+        C["Create output folder\nSave job_description.txt"]
+    end
+
+    P1 --> P15["Phase 1.5 — Job Fit Pre-Check\njob_fit_scorer.py"]
+    P15 --> FIT{Fit score?}
+
+    FIT -->|"≥ 55 — proceed"| P2
+    FIT -->|"35–54 — confirm"| WEAK["Pause — show gaps\nAsk user to confirm"]
+    FIT -->|"&lt; 35 or knockouts"| NOGO(["Stop — show disqualifiers"])
+    WEAK -->|Confirmed| P2
+
+    P2["Phase 2 — Write Tailored Resume\nGenerate bullets from master resume\nExtract JD keywords → jd_keywords.json\nBolding pass · save resume.md\n(optional) Score_Prompt.txt"] --> P3
+
+    P3["Phase 3 — Score\nats_scorer.py + hr_scorer.py\non base &amp; tailored (4 CLI calls)"] --> CHK
+
+    CHK{ATS ≥ 65%\nHR ≥ 70%?}
+    CHK -->|Pass| P5
+    CHK -->|"Fail (max 2 rounds)"| P4["Phase 4 — Iterate\nAdjust bullets · re-score"]
+    P4 --> CHK
+
+    P5["Phase 5 — Finalization\nUpdate Job_Application_Tracker.xlsx"] --> P6
+    P6["Phase 6 — Report\nWrite Report.txt · display scoring table\nOffer web reports"] --> DONE(["Done"])
+```
+
+---
+
 ## Configuration
 
 ### `config.json`

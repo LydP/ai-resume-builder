@@ -25,9 +25,9 @@
     "semantic_hash": "ecf7e8fea585e93de22eb8c7c7ce63ef"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\config.json": {
-    "mtime": 1777252285.3732305,
-    "ast_hash": "07c2d929a38174446d038fb1010e6a0b",
-    "semantic_hash": "07c2d929a38174446d038fb1010e6a0b"
+    "mtime": 1781713796.036415,
+    "ast_hash": "49b607bcd0316dd1ef28a521e5be4d1d",
+    "semantic_hash": "49b607bcd0316dd1ef28a521e5be4d1d"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\data\\acronyms.json": {
     "mtime": 1773862347.4043329,
@@ -135,14 +135,14 @@
     "semantic_hash": "1fec75cd8940aab63c80cec7f464fa7a"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\.claude\\commands\\setup.md": {
-    "mtime": 1773778394.1046605,
-    "ast_hash": "c4e5903a302233e1f014f915b7afb0eb",
-    "semantic_hash": "c4e5903a302233e1f014f915b7afb0eb"
+    "mtime": 1781713832.0629709,
+    "ast_hash": "84a0c944f2b5f52021a41c8d8940fbb4",
+    "semantic_hash": "84a0c944f2b5f52021a41c8d8940fbb4"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\.claude\\commands\\tailor-resume.md": {
-    "mtime": 1780610747.920323,
-    "ast_hash": "5580f24df926cd8c94569a84a2fe008d",
-    "semantic_hash": "5580f24df926cd8c94569a84a2fe008d"
+    "mtime": 1781713785.1084375,
+    "ast_hash": "ced19b29aa9c1f0e12ce76bc7d0b9718",
+    "semantic_hash": "ced19b29aa9c1f0e12ce76bc7d0b9718"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\.claude\\commands\\writing-coach.md": {
     "mtime": 1774241265.896517,
@@ -205,9 +205,9 @@
     "semantic_hash": "810dd29cb253f163ab9c05f05506c842"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\README.md": {
-    "mtime": 1777252566.0871265,
-    "ast_hash": "eabe97c972f0bf5aa0468422d0d29247",
-    "semantic_hash": "eabe97c972f0bf5aa0468422d0d29247"
+    "mtime": 1781713919.1583552,
+    "ast_hash": "87156158dc5bd27cd88da1a43569dc29",
+    "semantic_hash": "87156158dc5bd27cd88da1a43569dc29"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\reference\\changelog.md": {
     "mtime": 1778005345.2006264,
@@ -230,9 +230,9 @@
     "semantic_hash": "0d3e4f73e91470fd1fe2928b4bcdae83"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\reference\\skill_gaps.md": {
-    "mtime": 1779921443.3450751,
-    "ast_hash": "3477265f34101094f831a4382f1266d4",
-    "semantic_hash": "3477265f34101094f831a4382f1266d4"
+    "mtime": 1780687851.9985814,
+    "ast_hash": "008214c75f50b65a6ccd8cb4e2c8f242",
+    "semantic_hash": "008214c75f50b65a6ccd8cb4e2c8f242"
   },
   "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\reference\\status.md": {
     "mtime": 1774993845.1349294,
@@ -248,5 +248,15 @@
     "mtime": 1774239249.780186,
     "ast_hash": "9ed2d3c5d2f6ceaf6b6f7d27a49b653b",
     "semantic_hash": "9ed2d3c5d2f6ceaf6b6f7d27a49b653b"
+  },
+  "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\.claude\\commands\\create-format.md": {
+    "mtime": 1781713744.420929,
+    "ast_hash": "b5612d2cdc50f9ebfcb6b98488d1a0d1",
+    "semantic_hash": "b5612d2cdc50f9ebfcb6b98488d1a0d1"
+  },
+  "C:\\MyStuff\\Data\\Productivity\\Projects\\ClaudeCode\\ai_resume_builder\\Resume-Builder-modified\\formats\\sheets-resume.md": {
+    "mtime": 1781713688.4957094,
+    "ast_hash": "2b960806ebae4c01fb5baf11956a32d6",
+    "semantic_hash": "2b960806ebae4c01fb5baf11956a32d6"
   }
 }

@@ -60,6 +60,7 @@ python -m venv venv
 | `/writing-coach` | Get feedback on resume writing quality |
 | `/find-jobs` | Search for jobs and score them against your profile |
 | `/master-resume` | Start a master resume editing session |
+| `/create-format` | Convert a resume template (PDF or markdown) into a reusable format file |
 
 ---
 
@@ -118,6 +119,7 @@ Created automatically by `/setup`. To adjust settings afterward, edit it directl
 | `user_phone` | Contact phone |
 | `user_linkedin` | LinkedIn profile URL |
 | `generate_score_prompt` | If `true`, writes a `Score_Prompt.txt` you can paste into Claude.ai for a free LLM score |
+| `resume_format` | Path to the active format definition file (default: `formats/sheets-resume.md`); run `/create-format` to add new formats |
 
 ### `.env` — API keys for job discovery
 

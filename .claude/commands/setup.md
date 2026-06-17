@@ -69,7 +69,7 @@ Check if `config.json` already exists in the project directory.
   - LinkedIn URL
   - Path to their master resume file (supported formats: .docx, .pdf, .md, or .txt)
 
-Then write `config.json` using the answers collected, including `{venv_name}` from Step 1. Set `generate_score_prompt` to `false` as a default — Step 4 will update it:
+Then write `config.json` using the answers collected, including `{venv_name}` from Step 1. Set `generate_score_prompt` to `false` and `resume_format` to the default — Steps 4 and 5 will update them:
 
 ```json
 {
@@ -81,11 +81,53 @@ Then write `config.json` using the answers collected, including `{venv_name}` fr
   "user_email": "<their answer>",
   "user_phone": "<their answer>",
   "user_linkedin": "<their answer>",
-  "generate_score_prompt": false
+  "generate_score_prompt": false,
+  "resume_format": "formats/sheets-resume.md"
 }
 ```
 
-### Step 4: (Optional) Manual Scoring Prompt
+### Step 4: (Optional) Resume Format
+
+Ask the user:
+
+```
+Would you like to configure a resume format template?
+(1) Yes — provide a file path (PDF or markdown) to convert it now
+(2) No — use the built-in SheetsResume format (default)
+(3) I'll set this up later with /create-format
+```
+
+If **(1) Yes:**
+- Ask: "Please provide the path to your resume template file (e.g., `reference/my-template.pdf`):"
+- Read the file using the Read tool (PDF is supported).
+- Analyze the structure: sections, heading hierarchy, contact header layout, bullet style, emphasis patterns, date formats, any explicit layout rules.
+- Generate a format definition markdown file using this structure:
+  ```markdown
+  # [Format Name] Format
+
+  Source: [file path]
+
+  ## Template
+
+  [fenced code block with the markdown template, using [PLACEHOLDER] text]
+
+  ## Structural Rules
+
+  - [format-specific structural rules only]
+
+  ## Markdown Limitations vs. Original
+
+  [note any visual features that cannot be reproduced in plain markdown]
+  ```
+- Show the generated content to the user and ask them to confirm before saving.
+- Ask for a short slug name (e.g., `harvard`, `my-format`). Save to `formats/{slug}.md`.
+- Update `resume_format` in `config.json` to `"formats/{slug}.md"`.
+
+If **(2) No** or **(3) Later:**
+- Keep `"resume_format": "formats/sheets-resume.md"` in `config.json` (already set in Step 3).
+- For option (3), tell the user: "Run `/create-format <path-to-template>` any time to add a new format."
+
+### Step 5: (Optional) Manual Scoring Prompt
 
 Ask the user:
 
@@ -103,7 +145,7 @@ If NO or SKIP:
 - Add `"generate_score_prompt": false` to `config.json`
 - They can always run `/setup` again later to enable it.
 
-### Step 5: Verify
+### Step 6: Verify
 
 Run a quick test using the venv's Python to verify everything works:
 
@@ -120,6 +162,7 @@ Setup complete! You can now use:
   /cover-letter [paste JD]               — Cover letter only
   /writing-coach [resume file]            — Improve resume writing quality
   /find-jobs [job title] [location]       — Discover & score matching jobs
+  /create-format [path-to-template]       — Convert a resume template to a format file
 
 The ATS/HR scoring engine is now active and will automatically score your resumes.
 ```

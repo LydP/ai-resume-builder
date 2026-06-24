@@ -79,15 +79,16 @@ flowchart TD
         C["Create output folder\nSave job_description.txt"]
     end
 
-    P1 --> P15["Phase 1.5 — Job Fit Pre-Check\njob_fit_scorer.py"]
-    P15 --> FIT{Fit score?}
+    P1 --> P15["Phase 1.5 — Extract JD Keywords\nAnalyze JD · save jd_keywords.json"]
+    P15 --> P17["Phase 1.7 — Job Fit Pre-Check\njob_fit_scorer.py"]
+    P17 --> FIT{Fit score?}
 
     FIT -->|"≥ 55 — proceed"| P2
     FIT -->|"35–54 — confirm"| WEAK["Pause — show gaps\nAsk user to confirm"]
     FIT -->|"&lt; 35 or knockouts"| NOGO(["Stop — show disqualifiers"])
     WEAK -->|Confirmed| P2
 
-    P2["Phase 2 — Write Tailored Resume\nGenerate bullets from master resume\nExtract JD keywords → jd_keywords.json\nBolding pass · save resume.md\n(optional) Score_Prompt.txt"] --> P3
+    P2["Phase 2 — Write Tailored Resume\nGenerate bullets from master resume\nBolding pass (Rule 19) · save resume.md\n(optional) Score_Prompt.txt"] --> P3
 
     P3["Phase 3 — Score\nats_scorer.py + hr_scorer.py\non base &amp; tailored (4 CLI calls)"] --> CHK
 

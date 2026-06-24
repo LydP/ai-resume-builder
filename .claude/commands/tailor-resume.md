@@ -50,9 +50,33 @@ Then execute these **3 actions in a single parallel tool call** (no agents — u
 
 ---
 
-## PHASE 1.5: JOB FIT PRE-CHECK (mandatory gate)
+## PHASE 1.5: EXTRACT JD KEYWORDS
 
-Now that `job_description.txt` is saved, run the Job Fit Scorer:
+Now that `job_description.txt` is saved, analyze the job description and extract the keywords and phrases that will be targeted when writing the resume. Save as `applications/{CompanyName} - {JobTitle}/jd_keywords.json`:
+
+```json
+{
+  "domain": "<clinical_research|pharma_biotech|technology|finance|consulting|general>",
+  "keywords": [
+    {"term": "<single word or short compound noun>", "weight": 3}
+  ],
+  "phrases": [
+    {"term": "<multi-word phrase that should appear verbatim>", "weight": 2}
+  ]
+}
+```
+
+Weight scale: **3** = core requirement (repeated, role-defining, knockout if absent), **2** = important (clearly desired, prominently featured), **1** = contextual (mentioned once, nice-to-have).
+
+Keywords vs phrases: `keywords` are terms ATS systems match individually; `phrases` are sequences that must appear verbatim. If a term fits both, put it in `phrases` only.
+
+Rules: Max 40 keywords, max 20 phrases. Only include terms actually present in the JD. All lowercase. Omit generic filler ("experience", "strong", "ability to").
+
+---
+
+## PHASE 1.7: JOB FIT PRE-CHECK (mandatory gate)
+
+Now that `jd_keywords.json` is saved, run the Job Fit Scorer:
 
 ```bash
 {venv_python} job_fit_scorer.py --check "{master_resume_path}" "applications/{CompanyName} - {JobTitle}/job_description.txt" --json
@@ -72,27 +96,7 @@ Display the fit score, any knockouts, and key dimensions before proceeding.
 
 Generate the tailored resume (see RESUME WRITING RULES below). Write all bullets first — **do not bold anything yet**.
 
-**After writing all bullets, extract and save JD keywords first**, then do the bolding pass (Rule 19), then save `resume.md`.
-
-Analyze the job description and list the keywords and phrases you intentionally targeted when writing the resume. Save as `applications/{CompanyName} - {JobTitle}/jd_keywords.json`:
-
-```json
-{
-  "domain": "<clinical_research|pharma_biotech|technology|finance|consulting|general>",
-  "keywords": [
-    {"term": "<single word or short compound noun>", "weight": 3}
-  ],
-  "phrases": [
-    {"term": "<multi-word phrase that should appear verbatim>", "weight": 2}
-  ]
-}
-```
-
-Weight scale: **3** = core requirement (repeated, role-defining, knockout if absent), **2** = important (clearly desired, prominently featured), **1** = contextual (mentioned once, nice-to-have).
-
-Keywords vs phrases: `keywords` are terms ATS systems match individually; `phrases` are sequences that must appear verbatim. If a term fits both, put it in `phrases` only.
-
-Rules: Max 40 keywords, max 20 phrases. Only include terms actually present in the JD. All lowercase. Omit generic filler ("experience", "strong", "ability to").
+**After writing all bullets**, do the bolding pass (Rule 19), then save `resume.md`.
 
 **If `generate_score_prompt: true` in `config.json`** — after saving `resume.md`, generate a manual score prompt:
 1. Read the template at `reference/llm_score_prompt.txt`
